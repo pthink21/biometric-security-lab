@@ -1,0 +1,410 @@
+================================================================
+PHẦN 2: CÁC BƯỚC THỰC HIỆN VÀ CÔNG CỤ DÙNG ĐỂ LÀM RA ĐỒ ÁN
+Đồ án: Nghiên cứu tấn công vào hệ thống xác thực sinh trắc học khuôn mặt
+Sinh viên: Nguyễn Phúc Thịnh — Lớp 23DATA1 — MSSV 2387700066
+================================================================
+
+
+2.1. KHẢO SÁT VÀ XÁC ĐỊNH YÊU CẦU
+================================================================
+
+2.1.1. Mục tiêu của đồ án
+----------------------------------------------------------------
+Đồ án "Nghiên cứu tấn công vào hệ thống xác thực sinh trắc học
+khuôn mặt" hướng đến ba mục tiêu cốt lõi:
+
+  - Về học thuật: hệ thống hóa cơ sở lý thuyết về xác thực sinh
+    trắc học, các kiểu tấn công (Presentation, Replay, Injection,
+    Deepfake) và tiêu chuẩn ISO/IEC 30107 về phát hiện tấn công
+    trình diện (PAD).
+
+  - Về thực nghiệm: xây dựng một môi trường lab gồm hai phiên
+    bản server — vulnerable (chưa có liveness) và secured (có
+    liveness) — để minh chứng hiệu quả phòng vệ bằng số liệu
+    định lượng.
+
+  - Về kỹ năng: rèn luyện khả năng phân tích lỗ hổng, lập trình
+    Python, huấn luyện mô hình deep learning và viết báo cáo
+    khoa học.
+
+2.1.2. Đối tượng sử dụng
+----------------------------------------------------------------
+  - Sinh viên ngành An toàn thông tin và Khoa học máy tính:
+    sử dụng đồ án như tài liệu tham khảo, lab demo trong môn
+    học bảo mật và machine learning.
+
+  - Giảng viên hướng dẫn: dùng để đánh giá mức độ hiểu lý
+    thuyết và năng lực thực hành.
+
+  - Nhà phát triển hệ thống biometric: quan tâm tới một mô
+    hình tham chiếu nhỏ gọn về cách triển khai PAD bằng
+    MobileNetV2.
+
+2.1.3. Các chức năng chính cần có
+----------------------------------------------------------------
+  - Đăng ký khuôn mặt (/register) — lưu vector đặc trưng 128
+    chiều vào CSDL.
+  - Xác thực khuôn mặt (/authenticate) — so khớp khoảng cách
+    Euclidean.
+  - Liệt kê người dùng đã đăng ký (/users) — minh họa lỗ hổng
+    enumeration.
+  - Hai bộ công cụ tấn công: Replay (qua webcam ảo) và
+    Injection (qua HTTP POST).
+  - Module huấn luyện và đánh giá mô hình Liveness Detection.
+  - Server secured có tích hợp kiểm tra liveness trước khi
+    xác thực.
+
+
+2.2. PHÂN TÍCH HỆ THỐNG
+================================================================
+
+2.2.1. Phân tích chức năng
+----------------------------------------------------------------
+Hệ thống được chia thành ba thành phần độc lập, giao tiếp
+qua HTTP:
+
+  - Server (Flask): cung cấp API REST cho các thao tác đăng
+    ký, xác thực và quản lý user.
+
+  - Attacker tools: mô phỏng góc nhìn của kẻ tấn công, gồm
+      * 01_collect.py        — thu ảnh nạn nhân
+      * 02_replay_attack.py  — replay qua webcam ảo
+      * 03_injection_attack.py — gửi HTTP trực tiếp
+
+  - Defender tools: thu dữ liệu, huấn luyện và xuất mô hình
+    PAD.
+
+2.2.2. Dữ liệu cần quản lý
+----------------------------------------------------------------
+  - Cơ sở dữ liệu khuôn mặt: face_db/face_database.pkl, lưu
+    dạng dictionary { tên: vector_128d } qua Python pickle.
+    Đây là lựa chọn cố ý để minh họa rủi ro bảo mật của
+    serialization (OWASP A08:2021 — Software and Data
+    Integrity Failures).
+
+  - Dataset huấn luyện:
+      * defender/dataset/real/  — 200 ảnh thật
+      * defender/dataset/fake/  — 200 ảnh in giấy, ảnh điện
+                                  thoại, ảnh tổng hợp
+
+  - Trọng số mô hình: defender/output/liveness_model.pth —
+    file checkpoint của MobileNetV2 sau fine-tune.
+
+  - Log thực nghiệm: _report_dump.txt, các biểu đồ .png
+    trong _report_assets/.
+
+2.2.3. Luồng hoạt động chính
+----------------------------------------------------------------
+Một phiên xác thực hợp lệ trên server secured đi qua các bước:
+
+  1. Client (trình duyệt) gọi getUserMedia() để lấy frame từ
+     webcam, mã hóa base64 rồi POST tới /authenticate.
+
+  2. Server nhận JSON, decode ảnh bằng OpenCV.
+
+  3. (MỚI ở phiên bản secured) Frame đi qua bộ phân loại
+     MobileNetV2 → trả về liveness_score. Nếu < 0.5 → từ chối.
+
+  4. Nếu vượt qua liveness, ảnh được đưa vào face_recognition
+     để dò khuôn mặt và trích vector 128 chiều.
+
+  5. Vector mới được so khớp khoảng cách Euclidean với toàn
+     bộ entries trong face_database.pkl. Nếu khoảng cách nhỏ
+     nhất < 0.6 → trả về authenticated=True.
+
+  6. Server log thời điểm, kết quả và trả JSON về client.
+
+
+2.3. THIẾT KẾ HỆ THỐNG
+================================================================
+
+2.3.1. Thiết kế giao diện
+----------------------------------------------------------------
+Giao diện web đặt trong server/templates/index.html, gồm
+ba tab:
+
+  - Đăng ký: ô nhập tên + xem trước webcam + nút "Chụp & đăng ký".
+  - Chấm công: preview webcam + nút "Xác thực", hiển thị kết
+    quả Accept/Deny kèm độ tương đồng.
+  - Danh sách nhân viên: bảng liệt kê các user đã đăng ký
+    (dùng để minh họa lỗ hổng /users).
+
+Bố cục dùng HTML5 + CSS thuần, kèm JavaScript thao tác
+getUserMedia và fetch(). Style tham khảo Bootstrap nhưng
+tinh giản để dễ tùy biến.
+
+2.3.2. Thiết kế "cơ sở dữ liệu"
+----------------------------------------------------------------
+Vì là môi trường lab, đồ án không dùng RDBMS mà chọn lưu
+dạng pickle để tái tạo điều kiện thực tế của nhiều prototype
+biometric. Cấu trúc:
+
+    {
+        "Nguyễn Phúc Thịnh": np.ndarray(shape=(128,), dtype=float64),
+        "Test User":         np.ndarray(shape=(128,), dtype=float64),
+        ...
+    }
+
+2.3.3. Thiết kế kiến trúc chương trình
+----------------------------------------------------------------
+Kiến trúc client–server ba lớp:
+
+  - Lớp giao diện (Presentation): HTML/JS chạy trên trình duyệt.
+  - Lớp dịch vụ (Application): Flask + các blueprint cho
+    /register, /authenticate, /users.
+  - Lớp xử lý nghiệp vụ (Logic): module nhận diện
+    (face_recognition, dlib) + module liveness
+    (PyTorch + MobileNetV2).
+
+2.3.4. Sơ đồ chức năng và luồng dữ liệu
+----------------------------------------------------------------
+Đồ án cung cấp đầy đủ các sơ đồ trong thư mục _report_assets/:
+
+  - fig_3_1_kien_truc_tong_the.png   — kiến trúc client-server.
+  - fig_3_2_server_vulnerable.png    — pipeline server vulnerable.
+  - fig_3_3_attack_replay_injection.png — sơ đồ hai vector tấn công.
+  - fig_4_3_server_secured.png       — pipeline server đã có PAD.
+  - quy_trinh_du_an_tong_the.png     — sơ đồ tổng thể 5 giai
+                                       đoạn của dự án.
+
+
+2.4. XÂY DỰNG CHƯƠNG TRÌNH
+================================================================
+
+2.4.1. Lập trình các chức năng chính
+----------------------------------------------------------------
+  - Server vulnerable (server/app.py): khoảng 150 dòng Python,
+    đăng ký endpoint Flask, decode ảnh bằng OpenCV, trích đặc
+    trưng bằng face_recognition.face_encodings, so khớp bằng
+    numpy.linalg.norm.
+
+  - Server secured (server/app_secured.py): kế thừa logic của
+    app.py, thêm bước nạp mô hình liveness_model.pth bằng
+    PyTorch và kiểm tra điểm liveness trước khi nhận dạng.
+
+  - Tool tấn công Injection (attacker/03_injection_attack.py):
+    dùng requests.post(...) gửi JSON chứa ảnh base64, hỗ trợ
+    chế độ brute-force với cả thư mục ảnh.
+
+  - Tool huấn luyện (defender/train_liveness.py): hai pha
+      * Pha 1: freeze backbone MobileNetV2 và chỉ train
+               classifier head 10 epoch.
+      * Pha 2: unfreeze hai khối cuối, fine-tune 15 epoch.
+    Dùng Adam optimizer, learning rate 1e-3 → 1e-4,
+    batch size 32.
+
+2.4.2. Kết nối "cơ sở dữ liệu"
+----------------------------------------------------------------
+Hai hàm trợ giúp load_database() và save_database() xử lý
+đọc/ghi pickle. Mỗi lần /register thành công, dictionary
+trong RAM được serialize lại xuống đĩa. Đây cũng chính là
+điểm yếu được phân tích trong chương 3 (deserialization có
+thể bị lợi dụng nếu attacker chiếm quyền ghi file).
+
+2.4.3. Xử lý giao diện người dùng
+----------------------------------------------------------------
+Frontend dùng JavaScript ES6 thuần:
+
+  - navigator.mediaDevices.getUserMedia() để mở webcam.
+  - canvas.toDataURL("image/jpeg") để snapshot frame, mã
+    hóa base64.
+  - fetch("/authenticate", { method: "POST", body: JSON })
+    để gọi API.
+  - Cập nhật DOM theo kết quả: màu xanh (Accept), màu đỏ
+    (Deny), hiển thị score.
+
+2.4.4. Các chức năng phụ trợ
+----------------------------------------------------------------
+  - Đăng ký: thêm entry mới vào pickle, kiểm tra trùng tên.
+  - Xác thực: trả về user gần nhất hoặc Unknown.
+  - Danh sách user: endpoint GET /users trả JSON — minh họa
+    lỗ hổng enumeration để thảo luận trong chương 3.
+  - Trinh sát/tấn công hàng loạt: --recon và --dir trong
+    03_injection_attack.py.
+
+
+2.5. KIỂM THỬ CHƯƠNG TRÌNH
+================================================================
+
+2.5.1. Kiểm tra từng chức năng
+----------------------------------------------------------------
+Bảng kịch bản kiểm thử rút gọn:
+
+  TC-01: Đăng ký khuôn mặt thật
+         → Lưu thành công, file pickle tăng 1 entry.
+
+  TC-02: Đăng ký khi không có khuôn mặt trong khung hình
+         → Trả lỗi "không tìm thấy khuôn mặt".
+
+  TC-03: Xác thực với cùng người vừa đăng ký
+         → Accept, distance < 0.4.
+
+  TC-04: Xác thực với người chưa đăng ký
+         → Deny.
+
+  TC-05: Tấn công Injection trên server vulnerable
+         → Accept (lỗ hổng đã được chứng minh).
+
+  TC-06: Tấn công Injection trên server secured
+         → Deny (liveness_score < 0.5).
+
+  TC-07: Tấn công Replay với ảnh trên màn hình điện thoại
+         trên server secured
+         → Deny.
+
+2.5.2. Kiểm tra lỗi nhập liệu
+----------------------------------------------------------------
+  - Tên rỗng, tên trùng, ảnh sai định dạng, ảnh không có
+    khuôn mặt → đều được bắt lỗi và trả về thông báo tiếng
+    Việt rõ ràng.
+  - Payload JSON không hợp lệ → server trả HTTP 400.
+
+2.5.3. Kiểm tra kết quả hiển thị
+----------------------------------------------------------------
+  - Đối chiếu nội dung JSON trả về với log server và kết
+    quả hiển thị trên giao diện.
+  - Kiểm tra biểu đồ training_history.png, ma trận nhầm lẫn
+    để chắc chắn các chỉ số FAR/FRR/APCER khớp với bảng 4.2
+    trong báo cáo.
+
+2.5.4. Sửa lỗi và hoàn thiện
+----------------------------------------------------------------
+Một số vấn đề đã gặp và xử lý:
+
+  - Lỗi font tiếng Việt không hiển thị dấu trên matplotlib
+    → fix bằng cách load Segoe UI qua FontProperties.
+
+  - Lỗi encoding cp1252 khi print tiếng Việt trên Windows
+    console → ép sys.stdout về UTF-8.
+
+  - Latency liveness lúc đầu cao (~250 ms) → giảm còn ~70 ms
+    bằng cách torch.no_grad() và resize ảnh xuống 224×224
+    trước khi infer.
+
+
+2.6. HOÀN THIỆN BÁO CÁO VÀ SẢN PHẨM
+================================================================
+
+2.6.1. Viết báo cáo
+----------------------------------------------------------------
+Báo cáo BAOCAODOANCOSO_NGUYENPHUCTHINH.docx gồm 5 chương,
+được đánh số theo chuẩn của trường, có Mục lục tự sinh,
+Danh mục hình ảnh và Danh mục bảng biểu. File định dạng
+Times New Roman 13pt, giãn dòng 1.5, căn đều hai bên.
+
+2.6.2. Hình minh họa
+----------------------------------------------------------------
+Toàn bộ 20 hình từ Hình 2.1 đến Hình 5.1 được sinh tự động
+bằng matplotlib (script _make_diagrams.py), đảm bảo nhất
+quán phong cách và đều có chữ tiếng Việt có dấu. Sơ đồ tổng
+thể 5 giai đoạn (quy_trinh_du_an_tong_the.png) được tạo
+riêng để minh họa toàn bộ workflow trong một trang.
+
+2.6.3. Slide thuyết trình
+----------------------------------------------------------------
+File presentation.html (dạng web slide) và
+Biometric_Security_Lab_Presentation.pptx (PowerPoint) được
+sinh từ script create_presentation.py. Cấu trúc 12 slide:
+
+   1. Bìa
+   2. Đặt vấn đề
+   3. Mục tiêu
+   4. Cơ sở lý thuyết
+   5. Kiến trúc hệ thống
+   6. Server vulnerable
+   7. Tấn công Replay
+   8. Tấn công Injection
+   9. Liveness Detection (PAD)
+  10. Kết quả định lượng
+  11. Demo trực tiếp
+  12. Kết luận
+
+2.6.4. Đóng gói
+----------------------------------------------------------------
+Cấu trúc bàn giao:
+
+    biometric-security-lab/
+    ├── server/                  # mã nguồn server vulnerable & secured
+    ├── attacker/                # script tấn công
+    ├── defender/                # huấn luyện mô hình + dataset mẫu
+    ├── _report_assets/          # toàn bộ hình minh họa
+    ├── setup.sh                 # script cài đặt tự động
+    ├── requirements.txt         # gộp dependencies
+    ├── BAOCAODOANCOSO_*.docx    # báo cáo
+    └── presentation.html        # slide HTML
+
+
+2.7. CÔNG CỤ VÀ CÔNG NGHỆ SỬ DỤNG
+================================================================
+
+2.7.1. Ngôn ngữ lập trình
+----------------------------------------------------------------
+  - Python 3.11 — ngôn ngữ chính cho server, attacker, defender.
+  - HTML5 / CSS3 / JavaScript ES6 — frontend trong
+    templates/index.html.
+
+2.7.2. Framework và thư viện
+----------------------------------------------------------------
+  - Flask 3.0 + Flask-CORS — web framework cho server.
+  - face_recognition 1.3 + dlib 19.24 — phát hiện và trích
+    đặc trưng khuôn mặt.
+  - PyTorch 2.x + torchvision — huấn luyện và inference
+    MobileNetV2.
+  - OpenCV 4.8 + Pillow — xử lý ảnh.
+  - NumPy 1.24, scikit-learn 1.3 — tính toán số học, ma
+    trận nhầm lẫn.
+  - Matplotlib 3.7 — sinh biểu đồ và sơ đồ kiến trúc.
+  - python-docx 1.2 — chèn ảnh và định dạng báo cáo Word
+    tự động.
+  - python-pptx — sinh slide PowerPoint.
+  - Requests 2.31 — gửi HTTP cho công cụ tấn công.
+
+2.7.3. Cơ sở dữ liệu
+----------------------------------------------------------------
+  - Pickle file (.pkl) — lưu trữ vector khuôn mặt 128 chiều.
+    Lựa chọn này có chủ đích để minh họa rủi ro
+    deserialization theo OWASP.
+  - File system cho dataset ảnh real/fake.
+
+2.7.4. Công cụ lập trình
+----------------------------------------------------------------
+  - Visual Studio Code — IDE chính, dùng các extension
+    Python, Pylance, GitLens.
+  - PyCharm Community — debug khi train model.
+  - Jupyter Notebook — thử nghiệm nhanh các bước tiền xử lý
+    ảnh.
+
+2.7.5. Công cụ thiết kế giao diện
+----------------------------------------------------------------
+  - Bootstrap 5 (qua CDN) — bố cục giao diện web.
+  - Matplotlib + custom Python script — vẽ toàn bộ sơ đồ
+    kiến trúc, pipeline và biểu đồ kết quả.
+
+2.7.6. Công cụ hỗ trợ tấn công
+----------------------------------------------------------------
+  - v4l2loopback — module kernel Linux tạo webcam ảo cho
+    tấn công Replay.
+  - Postman / curl — kiểm thử endpoint API.
+  - Wireshark — phân tích gói tin trong giai đoạn khảo sát
+    threat model.
+
+2.7.7. Quản lý mã nguồn
+----------------------------------------------------------------
+  - Git + GitHub — quản lý phiên bản mã nguồn, commit theo
+    từng chương để dễ truy vết lịch sử phát triển.
+
+2.7.8. Công cụ viết báo cáo và thuyết trình
+----------------------------------------------------------------
+  - Microsoft Word 365 — biên soạn báo cáo
+    BAOCAODOANCOSO_NGUYENPHUCTHINH.docx.
+  - Microsoft PowerPoint 365 — slide thuyết trình.
+  - Canva — thiết kế trang bìa, infographic phụ trợ.
+  - draw.io / diagrams.net — vẽ một số sơ đồ luồng dữ liệu.
+
+2.7.9. Hệ điều hành thí nghiệm
+----------------------------------------------------------------
+  - Windows 11 Pro — môi trường phát triển chính.
+  - Kali Linux 2024.x (chạy trên VMware) — môi trường tấn
+    công Replay (cần webcam ảo).
+
+================================================================

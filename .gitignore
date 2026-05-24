@@ -1,0 +1,16 @@
+venv/
+__pycache__/
+*.pyc
+.env
+.vscode/
+.idea/
+node_modules/
+bin/
+obj/
+venv/
+__pycache__/
+*.pyc
+.env
+.vscode/
+.idea/
+.claude/

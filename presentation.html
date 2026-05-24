@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biometric Security Lab - Presentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .slides-container {
+            width: 100%;
+            max-width: 1000px;
+            aspect-ratio: 16 / 9;
+            background: white;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .slide {
+            display: none;
+            flex: 1;
+            padding: 60px;
+            background: white;
+            animation: slideIn 0.5s ease;
+        }
+
+        .slide.active {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Slide Styles */
+        .slide-title {
+            text-align: center;
+        }
+
+        .slide-title h1 {
+            font-size: 3.5em;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .slide-title p {
+            font-size: 1.5em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .slide-title .subtitle {
+            font-size: 1.2em;
+            color: #999;
+            margin-top: 40px;
+        }
+
+        h2 {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 15px;
+        }
+
+        h3 {
+            font-size: 1.5em;
+            color: #764ba2;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        p, li {
+            font-size: 1.1em;
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        ul {
+            margin-left: 40px;
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 12px;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #856404;
+            font-weight: bold;
+        }
+
+        .code-block {
+            background: #f5f5f5;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            border-radius: 5px;
+        }
+
+        .diagram {
+            text-align: center;
+            margin: 20px 0;
+            font-family: monospace;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .danger {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .warning {
+            color: #ff9800;
+            font-weight: bold;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 60px;
+            background: #f8f9fa;
+            border-top: 1px solid #ddd;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            font-size: 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #764ba2;
+        }
+
+        .slide-counter {
+            font-size: 1.1em;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .keyboard-hint {
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        .logo {
+            font-size: 1.2em;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95em;
+        }
+
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        table th {
+            background: #667eea;
+            color: white;
+        }
+
+        table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="slides-container">
+        <!-- SLIDE 1: TITLE -->
+        <div class="slide active slide-title">
+            <h1>🔐 Biometric Security Lab</h1>
+            <p>Tấn Công & Phòng Vệ Sinh Trắc Học Khuôn Mặt</p>
+            <div class="subtitle">
+                <p><strong>Sinh viên:</strong> [Tên của bạn]</p>
+                <p><strong>Ngày:</strong> 20/04/2026</p>
+                <p><strong>Giảng viên:</strong> [Tên giảng viên]</p>
+            </div>
+        </div>
+
+        <!-- SLIDE 2: OVERVIEW -->
+        <div class="slide">
+            <h2>📋 Tổng Quan</h2>
+            <h3>Vấn Đề</h3>
+            <ul>
+                <li>Sinh trắc học khuôn mặt dễ bị tấn công nếu không có bảo vệ đúng</li>
+                <li>Nhiều ứng dụng thực tế không kiểm tra Liveness Detection</li>
+                <li>Attacker có thể dùng ảnh tĩnh để bypass xác thực</li>
+            </ul>
+
+            <h3>Giải Pháp Của Em</h3>
+            <ul>
+                <li>✅ Xây dựng server xác thực khuôn mặt đơn giản</li>
+                <li>✅ Chứng minh 2 loại tấn công: <span class="danger">Reconnaissance + Injection</span></li>
+                <li>✅ Đề xuất giải pháp bảo mật</li>
+            </ul>
+        </div>
+
+        <!-- SLIDE 3: ARCHITECTURE -->
+        <div class="slide">
+            <h2>🏗️ Kiến Trúc Hệ Thống</h2>
+            <div class="diagram">
+<pre>┌─────────────────────────────────────────────────────┐
+│         Flask Server (app.py)                       │
+├─────────────────────────────────────────────────────┤
+│  📤 POST /register      → Đăng ký khuôn mặt         │
+│  🔍 POST /authenticate  → Xác thực khuôn mặt        │
+│  📋 GET /users          → Liệt kê user (⚠️ NO AUTH)│
+└──────────────────┬──────────────────────────────────┘
+                   │
+        ┌──────────▼──────────┐
+        │ Face Recognition    │
+        │ (face_recognition)  │
+        │ - Trích xuất vector │
+        │ - 128-D encoding    │
+        └──────────┬──────────┘
+                   │
+        ┌──────────▼──────────┐
+        │ Database (pickle)   │
+        │ - User: encoding    │
+        │ - Registered time   │
+        └─────────────────────┘</pre>
+            </div>
+            <p><strong>Công nghệ:</strong> Python, Flask, face_recognition, OpenCV, numpy</p>
+        </div>
+
+        <!-- SLIDE 4: RECONNAISSANCE -->
+        <div class="slide">
+            <h2>🕵️ Tấn Công 1: Trinh Sát (Reconnaissance)</h2>
+
+            <h3>Cách Hoạt Động</h3>
+            <ul>
+                <li>Attacker gửi <span class="highlight">GET /users</span> (không cần auth)</li>
+                <li>Server trả về JSON chứa danh sách tất cả user</li>
+                <li>Attacker lấy được tên nạn nhân</li>
+            </ul>
+
+            <h3>Code Attacker</h3>
+            <div class="code-block">
+import requests
+resp = requests.get("http://localhost:5000/users")
+users = resp.json()["users"]
+# Output: [{"name": "Nguyen Van A", ...}]
+            </div>
+
+            <h3>Vấn Đề Bảo Mật</h3>
+            <p><span class="danger">❌ Information Disclosure</span> - Endpoint không yêu cầu authentication</p>
+        </div>
+
+        <!-- SLIDE 5: INJECTION ATTACK -->
+        <div class="slide">
+            <h2>💉 Tấn Công 2: Injection Attack</h2>
+
+            <h3>Quy Trình</h3>
+            <ul>
+                <li><strong>Bước 1:</strong> Lấy ảnh khuôn mặt nạn nhân (từ mạng)</li>
+                <li><strong>Bước 2:</strong> Encode ảnh thành base64</li>
+                <li><strong>Bước 3:</strong> POST trực tiếp tới /authenticate</li>
+                <li><strong>Bước 4:</strong> Server xác thực thành công ❌</li>
+            </ul>
+
+            <h3>Payload</h3>
+            <div class="code-block">
+POST /authenticate HTTP/1.1
+Content-Type: application/json
+
+{
+  "image": "data:image/jpeg;base64,/9j/4AAQSkZJ..."
+}
+            </div>
+
+            <h3>Tại Sao Thành Công?</h3>
+            <p><span class="danger">❌ Không có Liveness Detection</span> - Server không kiểm tra ảnh có phải từ khuôn mặt sống thật không</p>
+        </div>
+
+        <!-- SLIDE 6: DEMO RESULTS -->
+        <div class="slide">
+            <h2>🎯 Kết Quả Demo</h2>
+
+            <h3>Trinh Sát</h3>
+            <div class="code-block">
+$ python 03_injection_attack.py --recon
+[+] Tìm thấy 1 user: Nguyen Van A
+            </div>
+
+            <h3>Injection Attack - 1 Ảnh</h3>
+            <div class="code-block">
+$ python 03_injection_attack.py --image face_01.jpg
+<span class="success">[!!!] INJECTION THÀNH CÔNG!</span>
+[!!!] Xác thực là: Nguyen Van A
+[!!!] Confidence: 0.92
+            </div>
+
+            <h3>Brute-Force - 10 Ảnh</h3>
+            <table>
+                <tr>
+                    <th>Tổng số thử</th>
+                    <th>Thành công</th>
+                    <th>Thất bại</th>
+                    <th>Tỷ lệ</th>
+                </tr>
+                <tr>
+                    <td>10</td>
+                    <td><span class="danger">6</span></td>
+                    <td>4</td>
+                    <td><span class="danger">60%</span></td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- SLIDE 7: RECOMMENDATIONS -->
+        <div class="slide">
+            <h2>🛡️ Khuyến Nghị Bảo Mật</h2>
+
+            <h3>1. Liveness Detection</h3>
+            <ul>
+                <li>Yêu cầu chuyển động (nháy mắt, cười, quay đầu)</li>
+                <li>Phát hiện ảnh 2D vs khuôn mặt sống (dùng AI/ML)</li>
+            </ul>
+
+            <h3>2. Authentication & Authorization</h3>
+            <ul>
+                <li>Endpoint /users cần JWT token (chỉ admin)</li>
+                <li>Endpoint /authenticate vẫn công khai nhưng kết hợp Liveness</li>
+            </ul>
+
+            <h3>3. Rate Limiting & Logging</h3>
+            <ul>
+                <li>Giới hạn request (5 lần/phút)</li>
+                <li>Ghi log tất cả xác thực + IP address</li>
+                <li>Phát hiện pattern tấn công</li>
+            </ul>
+        </div>
+
+        <!-- SLIDE 8: CONCLUSION -->
+        <div class="slide slide-title">
+            <h1>🎓 Kết Luận</h1>
+            <ul style="text-align: left; margin-top: 40px;">
+                <li>✅ Sinh trắc học khuôn mặt là tốt nhưng <strong>cần bảo vệ bổ sung</strong></li>
+                <li>✅ <strong>Liveness Detection</strong> là bước quan trọng để chống tấn công</li>
+                <li>✅ <strong>Authentication</strong> trên tất cả endpoint là cần thiết</li>
+                <li>✅ Bảo mật sinh trắc học = kết hợp nhiều lớp bảo vệ</li>
+            </ul>
+            <p style="margin-top: 60px; text-align: center; color: #667eea; font-size: 1.5em;">
+                <strong>Cảm ơn! 🙏</strong>
+            </p>
+        </div>
+
+        <!-- CONTROLS -->
+        <div class="controls">
+            <div class="logo">🔐 Biometric Security Lab</div>
+            <button onclick="previousSlide()">← Trước</button>
+            <span class="slide-counter"><span id="current">1</span> / <span id="total">8</span></span>
+            <button onclick="nextSlide()">Sau →</button>
+            <span class="keyboard-hint">⌨️ ← Mũi tên trái/phải →</span>
+        </div>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        function showSlide(n) {
+            slides.forEach(slide => slide.classList.remove('active'));
+            if (n >= totalSlides) currentSlide = 0;
+            if (n < 0) currentSlide = totalSlides - 1;
+            slides[currentSlide].classList.add('active');
+            document.getElementById('current').textContent = currentSlide + 1;
+        }
+
+        function nextSlide() {
+            currentSlide++;
+            showSlide(currentSlide);
+        }
+
+        function previousSlide() {
+            currentSlide--;
+            showSlide(currentSlide);
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') previousSlide();
+        });
+
+        showSlide(0);
+    </script>
+</body>
+</html>

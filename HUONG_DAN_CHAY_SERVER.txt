@@ -1,0 +1,134 @@
+================================================================
+HƯỚNG DẪN CÁC BƯỚC CHẠY SERVER
+Đồ án: Nghiên cứu tấn công vào hệ thống xác thực sinh trắc học khuôn mặt
+Sinh viên: Nguyễn Phúc Thịnh — Lớp 23DATA1 — MSSV 2387700066
+================================================================
+
+
+A.1. YÊU CẦU MÔI TRƯỜNG
+----------------------------------------------------------------
+- Python 3.10 hoặc 3.11
+- Hệ điều hành: Windows 10/11, Ubuntu 22.04 hoặc Kali Linux
+- Webcam (camera tích hợp hoặc rời)
+- RAM tối thiểu 8 GB (khuyến nghị 16 GB khi train model)
+- Đã clone/copy đầy đủ thư mục biometric-security-lab
+
+
+A.2. KÍCH HOẠT MÔI TRƯỜNG ẢO
+----------------------------------------------------------------
+* Trên Windows (PowerShell):
+    cd C:\Users\ADMIN\biometric-security-lab
+    .\venv\Scripts\Activate.ps1
+
+* Trên Linux/Kali:
+    cd ~/biometric-security-lab
+    source venv/bin/activate
+
+* Nếu chưa cài thư viện, chạy:
+    pip install -r server/requirements.txt
+    pip install -r attacker/requirements.txt
+    pip install -r defender/requirements.txt
+
+
+A.3. CHẠY SERVER VULNERABLE (CHƯA CÓ LIVENESS DETECTION)
+----------------------------------------------------------------
+Đây là phiên bản dễ bị tổn thương, dùng để mô phỏng tấn công.
+
+    cd C:\Users\ADMIN\biometric-security-lab\server
+    python app.py
+
+Kết quả mong đợi: log Flask hiển thị
+    Running on http://127.0.0.1:5000
+
+Mở trình duyệt và truy cập:
+    http://localhost:5000
+
+Các thao tác trên giao diện:
+    1. Nhập tên người dùng → bấm "Đăng ký" để lưu khuôn mặt
+       vào server/face_db/face_database.pkl
+    2. Bấm "Chấm công" để gửi ảnh qua endpoint /authenticate
+    3. Truy cập http://localhost:5000/users để xem danh sách
+       user (mô phỏng lỗ hổng enumeration)
+
+
+A.4. MÔ PHỎNG TẤN CÔNG
+----------------------------------------------------------------
+
+A.4.1. Replay Attack (cần Linux + webcam ảo)
+    sudo modprobe v4l2loopback devices=1 video_nr=20 \
+         card_label="FakeWebcam"
+    cd attacker
+    python 02_replay_attack.py --mode image \
+           --source ./victim_photos/victim.jpg
+
+A.4.2. Injection Attack (chạy được trên cả Windows)
+    cd C:\Users\ADMIN\biometric-security-lab\attacker
+    python 03_injection_attack.py \
+           --target http://localhost:5000 \
+           --image .\victim_photos\victim.jpg
+
+* Trinh sát danh sách user đã đăng ký:
+    python 03_injection_attack.py \
+           --target http://localhost:5000 --recon
+
+
+A.5. HUẤN LUYỆN MÔ HÌNH LIVENESS DETECTION
+----------------------------------------------------------------
+    cd C:\Users\ADMIN\biometric-security-lab\defender
+    python create_dataset.py --class real --num 200
+    python create_dataset.py --class fake --num 200
+    python create_dataset.py --synthetic
+    python train_liveness.py
+
+Kết quả:
+    - defender/output/liveness_model.pth
+    - defender/output/training_history.png
+    - defender/output/confusion_matrix.png
+
+
+A.6. CHẠY SERVER SECURED (ĐÃ TÍCH HỢP PAD)
+----------------------------------------------------------------
+Dừng app.py (Ctrl+C) rồi chạy phiên bản đã gia cố:
+
+    cd C:\Users\ADMIN\biometric-security-lab\server
+    python app_secured.py
+
+Truy cập lại http://localhost:5000, sau đó CHẠY LẠI tấn công
+Injection ở mục A.4.2. Kết quả sẽ là:
+
+    {
+      "authenticated": false,
+      "reason": "Liveness check failed",
+      "score": 0.07
+    }
+
+→ Hệ thống đã chặn được ảnh giả mạo.
+
+
+A.7. CÁC ENDPOINT API CHÍNH
+----------------------------------------------------------------
+    GET   /              - Giao diện web
+    POST  /register      - Đăng ký khuôn mặt (name + image)
+    POST  /authenticate  - Xác thực khuôn mặt (image)
+    GET   /users         - Danh sách user đã đăng ký
+
+
+A.8. XỬ LÝ LỖI THƯỜNG GẶP
+----------------------------------------------------------------
+* "ModuleNotFoundError: No module named 'face_recognition'"
+    → Chưa active venv hoặc chưa cài requirements.
+      Chạy lại bước A.2.
+
+* "OSError: cannot load library 'libdlib'"
+    → Trên Linux: sudo apt install cmake build-essential
+      Trên Windows: cài Visual C++ Build Tools.
+
+* "Webcam không bật được"
+    → Kiểm tra quyền truy cập camera của trình duyệt
+      (chrome://settings/content/camera).
+
+* "Liveness model not found"
+    → Chưa train model. Chạy lại mục A.5 trước khi
+      chạy app_secured.py.
+
+================================================================

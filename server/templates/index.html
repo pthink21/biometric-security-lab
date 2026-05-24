@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Chấm công - Nhận diện Khuôn mặt</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a0a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 2px solid #1a1a4e;
+        }
+        header h1 {
+            font-size: 1.8em;
+            color: #00d4ff;
+        }
+        .warning-banner {
+            background: #ff4444;
+            color: white;
+            text-align: center;
+            padding: 8px;
+            font-weight: bold;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 0.85em;
+        }
+        .mode-switch {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 25px 0;
+        }
+        .mode-btn {
+            padding: 12px 30px;
+            border: 2px solid #333;
+            background: #1a1a3e;
+            color: #aaa;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        .mode-btn.active {
+            border-color: #00d4ff;
+            color: #00d4ff;
+            background: #0d1b3e;
+        }
+        .panel {
+            display: none;
+            background: #111140;
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 15px;
+        }
+        .panel.active { display: block; }
+        .video-container {
+            text-align: center;
+            margin: 15px 0;
+        }
+        video, canvas {
+            border-radius: 10px;
+            border: 3px solid #222;
+            max-width: 100%;
+        }
+        canvas { display: none; }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #333;
+            border-radius: 8px;
+            background: #0a0a2e;
+            color: #fff;
+            font-size: 1em;
+            margin: 10px 0;
+        }
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+        .btn-primary { background: #00d4ff; color: #000; }
+        .btn-success { background: #00cc66; color: #000; }
+        .btn-primary:hover { background: #33ddff; }
+        .btn-success:hover { background: #33dd88; }
+        .result-box {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        .result-success {
+            background: #0a3d1a;
+            border: 2px solid #00cc66;
+            color: #00ff80;
+        }
+        .result-fail {
+            background: #3d0a0a;
+            border: 2px solid #ff4444;
+            color: #ff6666;
+        }
+        .result-info {
+            background: #0a2a3d;
+            border: 2px solid #00aaff;
+            color: #66ccff;
+        }
+        .log-area {
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.85em;
+        }
+        .users-list {
+            margin-top: 15px;
+        }
+        .user-card {
+            background: #1a1a4e;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>HE THONG CHAM CONG - NHAN DIEN KHUON MAT</h1>
+            <p style="color:#888; margin-top:8px;">Cong ty X - Phong Nhan su</p>
+            <div class="warning-banner">
+                LAB DEMO - KHONG CO LIVENESS DETECTION - DE BI TAN CONG
+            </div>
+        </header>
+
+        <div class="mode-switch">
+            <button class="mode-btn active" onclick="switchMode('register')">DANG KY</button>
+            <button class="mode-btn" onclick="switchMode('auth')">CHAM CONG</button>
+            <button class="mode-btn" onclick="switchMode('users')">DS NHAN VIEN</button>
+        </div>
+
+        <!-- Panel Đăng ký -->
+        <div id="panel-register" class="panel active">
+            <h2 style="color:#00d4ff; margin-bottom:15px;">Dang ky Khuon mat</h2>
+            <input type="text" id="reg-name" placeholder="Nhap ten nhan vien (VD: Nguyen Van A)">
+            <div class="video-container">
+                <video id="reg-video" width="480" height="360" autoplay playsinline muted></video>
+                <canvas id="reg-canvas" width="480" height="360"></canvas>
+            </div>
+            <div style="text-align:center">
+                <button class="btn btn-primary" onclick="captureAndRegister()">CHUP & DANG KY</button>
+            </div>
+            <div id="reg-result" class="result-box"></div>
+        </div>
+
+        <!-- Panel Xác thực / Chấm công -->
+        <div id="panel-auth" class="panel">
+            <h2 style="color:#00cc66; margin-bottom:15px;">Cham cong - Xac thuc Khuon mat</h2>
+            <div class="video-container">
+                <video id="auth-video" width="480" height="360" autoplay playsinline muted></video>
+                <canvas id="auth-canvas" width="480" height="360"></canvas>
+            </div>
+            <div style="text-align:center">
+                <button class="btn btn-success" onclick="captureAndAuth()">XAC THUC</button>
+            </div>
+            <div id="auth-result" class="result-box"></div>
+        </div>
+
+        <!-- Panel Users -->
+        <div id="panel-users" class="panel">
+            <h2 style="color:#00d4ff; margin-bottom:15px;">Danh sach Nhan vien</h2>
+            <button class="btn btn-primary" onclick="loadUsers()">TAI LAI</button>
+            <div id="users-list" class="users-list"></div>
+        </div>
+
+        <!-- Log -->
+        <div class="log-area" id="log">
+            <div>[SYSTEM] He thong san sang. Dang cho ket noi webcam...</div>
+        </div>
+    </div>
+
+    <script>
+        let currentStream = null;
+
+        function log(msg) {
+            const logEl = document.getElementById('log');
+            const time = new Date().toLocaleTimeString('vi-VN');
+            logEl.innerHTML += `<div>[${time}] ${msg}</div>`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        async function startCamera(videoId) {
+            // Tat stream cu neu co
+            if (currentStream) {
+                currentStream.getTracks().forEach(t => t.stop());
+                currentStream = null;
+            }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 480 }, height: { ideal: 360 } },
+                    audio: false
+                });
+                const videoEl = document.getElementById(videoId);
+                videoEl.srcObject = stream;
+                await videoEl.play();
+                currentStream = stream;
+                log('Webcam da ket noi thanh cong!');
+            } catch (err) {
+                log('[ERROR] Khong the truy cap webcam: ' + err.message);
+                log('[INFO] Hay cho phep camera trong trinh duyet (bieu tuong camera tren thanh dia chi)');
+                alert('Khong truy cap duoc webcam!\\n\\n' +
+                      'Cach sua:\\n' +
+                      '1. Nhan vao bieu tuong camera/khoa tren thanh dia chi\\n' +
+                      '2. Chon "Allow" / "Cho phep"\\n' +
+                      '3. Tai lai trang (F5)\\n\\n' +
+                      'Loi: ' + err.message);
+            }
+        }
+
+        function switchMode(mode) {
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('panel-' + mode).classList.add('active');
+
+            if (mode === 'register') startCamera('reg-video');
+            else if (mode === 'auth') startCamera('auth-video');
+            else if (mode === 'users') loadUsers();
+        }
+
+        function captureFrame(videoId, canvasId) {
+            const video = document.getElementById(videoId);
+            const canvas = document.getElementById(canvasId);
+
+            // Kiem tra webcam da san sang chua
+            if (!video.srcObject || !video.videoWidth || video.videoWidth === 0) {
+                log('[ERROR] Webcam chua san sang! Cho webcam hien hinh roi thu lai.');
+                alert('Webcam chua san sang!\\nCho den khi thay hinh webcam roi nhan lai.');
+                return null;
+            }
+
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', 0.9);
+        }
+
+        async function captureAndRegister() {
+            const name = document.getElementById('reg-name').value.trim();
+            if (!name) {
+                showResult('reg-result', 'Vui long nhap ten nhan vien!', 'fail');
+                return;
+            }
+
+            const imageData = captureFrame('reg-video', 'reg-canvas');
+            if (!imageData) return;
+
+            log(`Dang dang ky: ${name}...`);
+            showResult('reg-result', 'Dang xu ly... vui long cho.', 'success');
+
+            try {
+                const resp = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, image: imageData })
+                });
+                const data = await resp.json();
+
+                if (data.success) {
+                    showResult('reg-result', `DANG KY THANH CONG: ${name}`, 'success');
+                    log(`[+] Da dang ky: ${name}`);
+                } else {
+                    showResult('reg-result', `LOI: ${data.error}`, 'fail');
+                    log(`[-] Loi dang ky: ${data.error}`);
+                }
+            } catch (err) {
+                showResult('reg-result', `LOI KET NOI: ${err.message}`, 'fail');
+                log(`[ERROR] ${err.message}`);
+            }
+        }
+
+        async function captureAndAuth() {
+            const imageData = captureFrame('auth-video', 'auth-canvas');
+            if (!imageData) return;
+
+            log('Dang xac thuc...');
+            showResult('auth-result', 'Dang xu ly... vui long cho.', 'success');
+
+            try {
+                const resp = await fetch('/authenticate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: imageData })
+                });
+                const data = await resp.json();
+
+                if (data.authenticated) {
+                    showResult('auth-result',
+                        `XAC THUC THANH CONG!\n${data.message}\n` +
+                        `Do chinh xac: ${(data.confidence * 100).toFixed(1)}%\n` +
+                        `Liveness: ${data.liveness_check}`,
+                        'success');
+                    log(`[+] Cham cong: ${data.user} (confidence: ${data.confidence})`);
+                } else {
+                    showResult('auth-result',
+                        data.error || 'KHONG NHAN DIEN DUOC. Vui long thu lai.',
+                        'fail');
+                    log(`[-] Xac thuc that bai`);
+                }
+            } catch (err) {
+                showResult('auth-result', `LOI KET NOI: ${err.message}`, 'fail');
+                log(`[ERROR] ${err.message}`);
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const resp = await fetch('/users');
+                const data = await resp.json();
+                const container = document.getElementById('users-list');
+                if (data.users.length === 0) {
+                    container.innerHTML = '<p style="color:#888">Chua co nhan vien nao dang ky.</p>';
+                    return;
+                }
+                container.innerHTML = data.users.map(u => `
+                    <div class="user-card">
+                        <span><strong>${u.name}</strong></span>
+                        <span style="color:#888; font-size:0.85em">${u.registered_at}</span>
+                    </div>
+                `).join('');
+            } catch (err) {
+                log(`[ERROR] ${err.message}`);
+            }
+        }
+
+        function showResult(id, message, type) {
+            const el = document.getElementById(id);
+            el.style.display = 'block';
+            el.className = 'result-box result-' + type;
+            el.innerText = message;
+        }
+
+        // Khởi tạo webcam
+        startCamera('reg-video');
+    </script>
+</body>
+</html>
