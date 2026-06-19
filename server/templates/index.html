@@ -152,9 +152,15 @@
         <header>
             <h1>HE THONG CHAM CONG - NHAN DIEN KHUON MAT</h1>
             <p style="color:#888; margin-top:8px;">Cong ty X - Phong Nhan su</p>
+            {% if not secured %}
             <div class="warning-banner">
                 LAB DEMO - KHONG CO LIVENESS DETECTION - DE BI TAN CONG
             </div>
+            {% else %}
+            <div class="warning-banner" style="background:#1b5e20;">
+                SERVER SECURED - DA TICH HOP LIVENESS DETECTION (MobileNetV2)
+            </div>
+            {% endif %}
         </header>
 
         <div class="mode-switch">

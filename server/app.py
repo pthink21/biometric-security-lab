@@ -84,7 +84,7 @@ def decode_image(image_data):
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", secured=False)
 
 
 @app.route("/register", methods=["POST"])

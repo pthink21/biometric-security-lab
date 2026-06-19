@@ -154,7 +154,7 @@ def check_liveness(img_array, face_location):
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", secured=True)
 
 
 @app.route("/health", methods=["GET"])
@@ -256,6 +256,14 @@ def authenticate():
                 "success": False,
                 "authenticated": False,
                 "error": "Không tìm thấy khuôn mặt"
+            }), 400
+        if len(face_locations) > 1:
+            print(f"[!] Phát hiện {len(face_locations)} khuôn mặt - từ chối")
+            return jsonify({
+                "success": False,
+                "authenticated": False,
+                "error": f"Phát hiện {len(face_locations)} khuôn mặt. Vui lòng chỉ một người trước camera.",
+                "num_faces": len(face_locations)
             }), 400
 
         # ============================================
